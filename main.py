@@ -1,143 +1,81 @@
 import pygame
-import math
-import sys
+from pygame.locals import *
+from OpenGL.GL import *
+from OpenGL.GLU import *
 
 pygame.init()
-# Constants
-WIDTH, HEIGHT = 800, 600
-FPS = 60
+display = (800, 600)
+pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
 
-# Set up the display
-window = pygame.display.set_mode((WIDTH, HEIGHT))
-clock = pygame.time.Clock()
+# Set up the perspective for the scene
+gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
 
-# Colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-
-class Block:
-    def __init__(self, x, y, z, block_type):
-        self.x = x
-        self.y = y
-        self.z = z
-        self.block_type = block_type  # Additional properties like block type can be added here
-
-    def draw(self, surface, camera, points):
-        # Here you would translate these points based on block's position
-        draw_block(surface, translate_points(points, camera, self.x, self.y, self.z))
-
-class Chunk:
-    def __init__(self, pos_x, pos_y, pos_z, width, height, depth):
-        self.blocks = [[[Block(x, y, z, 'air') for z in range(depth)] for y in range(height)] for x in range(width)]
-        self.pos_x = pos_x
-        self.pos_y = pos_y
-        self.pos_z = pos_z
-
-    def draw(self, surface, camera, points):
-        for x in range(len(self.blocks)):
-            for y in range(len(self.blocks[0])):
-                for z in range(len(self.blocks[0][0])):
-                    self.blocks[x][y][z].draw(surface, camera, points)
-
-def translate_points(base_points, camera, x, y, z):
-    translated = []
-    for point in base_points:
-        translated.append([point[0] + x, point[1] + y, point[2] + z])
-    return translated
-
-class Camera:
-    def __init__(self, x, y, z):
-        self.position = [x, y, z]
-        self.yaw = 0
-        self.pitch = 0
-        self.speed = 0.1
-        self.mouse_sensitivity = 0.2
-
-    def move(self, direction, amount):
-        if direction == "forward":
-            self.position[0] += math.sin(math.radians(self.yaw)) * amount
-            self.position[2] += math.cos(math.radians(self.yaw)) * amount
-        elif direction == "backward":
-            self.position[0] -= math.sin(math.radians(self.yaw)) * amount
-            self.position[2] -= math.cos(math.radians(self.yaw)) * amount
-        elif direction == "left":
-            self.position[0] -= math.cos(math.radians(self.yaw)) * amount
-            self.position[2] += math.sin(math.radians(self.yaw)) * amount
-        elif direction == "right":
-            self.position[0] += math.cos(math.radians(self.yaw)) * amount
-            self.position[2] -= math.sin(math.radians(self.yaw)) * amount
-
-    def rotate(self, mouse_dx, mouse_dy):
-        self.yaw += mouse_dx * self.mouse_sensitivity
-        self.pitch -= mouse_dy * self.mouse_sensitivity
-        self.pitch = max(-90, min(90, self.pitch))  # Limit pitch to [-90, 90] degrees
+# Move the camera back a bit
+glTranslatef(0.0, 0.0, -5)
 
 
-# Cube points
-points = [
-    [-1, -1, -1],
-    [1, -1, -1],
-    [1, 1, -1],
-    [-1, 1, -1],
-    [-1, -1, 1],
-    [1, -1, 1],
-    [1, 1, 1],
-    [-1, 1, 1],
-]
+def Cube():
+    vertices = (
+        (1, -1, -1),
+        (1, 1, -1),
+        (-1, 1, -1),
+        (-1, -1, -1),
+        (1, -1, 1),
+        (1, 1, 1),
+        (-1, -1, 1),
+        (-1, 1, 1),
+    )
 
-def draw_block(surface, points):
-    connects = [(0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6), (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7)]
-    for connect in connects:
-        p1 = perspective_projection(points[connect[0]])
-        p2 = perspective_projection(points[connect[1]])
-        pygame.draw.line(surface, WHITE, (p1[0] * 100 + WIDTH // 2, p1[1] * 100 + HEIGHT // 2), (p2[0] * 100 + WIDTH // 2, p2[1] * 100 + HEIGHT // 2), 1)
+    edges = (
+        (0, 1),
+        (1, 2),
+        (2, 3),
+        (3, 0),
+        (4, 5),
+        (4, 6),
+        (6, 7),
+        (7, 5),
+        (0, 4),
+        (1, 5),
+        (3, 6),
+        (2, 7)
+    )
 
-def perspective_projection(point, d=3):
-    x, y, z = point
-    factor = d / (d + z)
-    x = x * factor
-    y = y * factor
-    return [x, y]
+    colors = (
+        (1, 0, 0),  # Red
+        (0, 1, 0),  # Green
+        (0, 0, 1),  # Blue
+        (1, 1, 0),  # Yellow
+        (1, 0, 1),  # Magenta
+        (0, 1, 1),  # Cyan
+        (0.5, 0.5, 0.5),  # Grey
+        (1, 0.5, 0),  # Orange
+        (0.5, 0, 1),  # Purple
+        (1, 1, 1),  # White
+        (0, 0.5, 0.5),  # Teal
+        (0.5, 0.25, 0.75)  # Pinkish
+    )
 
+    glBegin(GL_LINES)
+    for i, edge in enumerate(edges):
+        glColor3fv(colors[i % len(colors)])
+        for vertex in edge:
+            glVertex3fv(vertices[vertex])
+    glEnd()
+
+rotf = 0.06
 def main():
-    pygame.mouse.set_visible(False)  # Hide the cursor
-    pygame.event.set_grab(True)  # Confine the cursor to the window
-
-    camera = Camera(0, 0, 0)
-    chunk = Chunk(0, 0, 0, 4, 4, 4)
-
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    sys.exit()
+                quit()
 
-        # Handle continuous key presses
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
-            camera.move("forward", camera.speed)
-        if keys[pygame.K_s]:
-            camera.move("backward", camera.speed)
-        if keys[pygame.K_a]:
-            camera.move("left", camera.speed)
-        if keys[pygame.K_d]:
-            camera.move("right", camera.speed)
-
-        # Handle mouse movement
-        mouse_dx, mouse_dy = pygame.mouse.get_rel()
-        camera.rotate(mouse_dx, mouse_dy)
-
-        window.fill(BLACK)
-        # Here you should modify the chunk drawing method to account for camera position and orientation
-        chunk.draw(window, camera, points)  # You need to update this method
- 
+        glRotatef(1 * rotf, 3 * rotf, 1 * rotf, 1 * rotf)  # Rotate the cube
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+        Cube()
         pygame.display.flip()
-        clock.tick(FPS)
-
+        pygame.time.wait(10)
 
 if __name__ == "__main__":
     main()
