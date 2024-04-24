@@ -8,6 +8,22 @@
 # but also by quantum creatures, who if any are observing you, your
 # equipment won't operate correctly
 
+# simpler mobs will be controlled by simple neural networks
+# these mobs will also be structures, or, like, dynamic rooms the player can
+# enter. Think of shrinking down and going inside of a pig. The world outside is no
+# longer rendered. You're practically in another dimension, which is just a small set of
+# rooms where you can mess with the pig's stomach and brain.
+# You mess with the brain by literally altering the neural net, which is represented by
+# blocks within the brain, on level Q-1
+# when you leave or when the animal dies, your position is updated by where you exit on the 
+# animal and where it was.
+
+# level Q is the quantum level
+# level 0 is the god level
+
+# Quantum level blocks have special flags denoting they don't contain chunk info
+# either that or they are simply integers within the arrays of Q-1
+
 ## Infinitium Bird Feather Staff
 # Allows users to glide down from the top of the chunk when switching scales
 # position and velocity into realm upon change will be dependent of the position and velocity
