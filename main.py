@@ -19,6 +19,18 @@
 ## Infinitium
 # Extremely rare, extremely heavy metal which can be used to alter the fabric of space.
 
+## Elytra
+# Item similar to elytra will allow for gliding. The catch however is that elytra will not work
+# in the macro layers. It will also not be very good in the classic layer. However speed and control
+# will greatly compound throughout the lower layers, allowing smaller players to fly around like bugs
+# around larger players. 
+
+## Attacking and tool usage
+# Attacking and tool usage in this game will be probably the only physics-based parts of this game.
+# Swings on tools, swords, and staffs will use data of the position and velocity of the tool to calculate
+# power, damage, what have you. To larger players, it will seem like their tools swing slow, and to
+# smaller players, their tools will swing fast.
+
 
 import pygame
 import numpy as np
@@ -26,9 +38,11 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-_CHUNK_SIZE = 5
+_CHUNK_SIZE = 8
 _CHUNK_SIZE_SQUARED = _CHUNK_SIZE * _CHUNK_SIZE
 _CHUNK_SIZE_CUBED = _CHUNK_SIZE_SQUARED * _CHUNK_SIZE
+_NUM_MACRO_CHUNKS = 2
+_DEFAULT_SCALE_FACTOR = (_CHUNK_SIZE** _NUM_MACRO_CHUNKS)
 
 
 def _pos2idx(pos):
@@ -51,9 +65,9 @@ class Chunk:
         else:
             parent_real = self.parent._realpos(depth - 1)
             return (
-                parent_real[0] + self.pos[0] / np.power(_CHUNK_SIZE_CUBED, depth),
-                parent_real[1] + self.pos[1] / np.power(_CHUNK_SIZE_CUBED, depth),
-                parent_real[2] + self.pos[2] / np.power(_CHUNK_SIZE_CUBED, depth),
+                parent_real[0] + self.pos[0] / np.float_power(_CHUNK_SIZE, depth - _NUM_MACRO_CHUNKS),
+                parent_real[1] + self.pos[1] / np.float_power(_CHUNK_SIZE, depth - _NUM_MACRO_CHUNKS),
+                parent_real[2] + self.pos[2] / np.float_power(_CHUNK_SIZE, depth - _NUM_MACRO_CHUNKS),
             )
 
     def add_child(self, chunk):
@@ -65,7 +79,8 @@ class Chunk:
             for i in self.items:
                 if i != None:
                     i.draw(depth + 1)
-            Cube(self._realpos(depth), self.id, depth)
+            if self.id != 0:
+                Cube(self._realpos(depth), self.id, depth)
 
 
 def init_gl(display):
@@ -79,13 +94,14 @@ def init_gl(display):
     # Switch back to model view matrix
     glMatrixMode(GL_MODELVIEW)
 
+#  (_CHUNK_SIZE** _NUM_MACRO_CHUNKS)
 
 class Camera:
-    def __init__(self, position=[0, 0, -5], yaw=0, pitch=0):
+    def __init__(self, position=[0.5 * 1, 1.5 * 1, -0.5 * 1], yaw=0, pitch=0):
         self.position = position
         self.yaw = yaw
         self.pitch = pitch
-        self.speed = 0.25
+        self.speed = 0.2 * _DEFAULT_SCALE_FACTOR
         self.mouse_sensitivity = 0.1
 
     def update_camera(self):
@@ -164,36 +180,54 @@ def create_cube_vbo():
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     return vbo_id
 
+color_list = [
+    (1.0, 0.0, 0.0),  # Red
+    (0.0, 1.0, 0.0),  # Green
+    (0.0, 0.0, 1.0),  # Blue
+    (1.0, 1.0, 0.0),  # Yellow
+    (1.0, 0.5, 0.0),  # Orange
+    (0.0, 1.0, 1.0),  # Cyan
+    (1.0, 0.0, 1.0),  # Magenta
+    (0.5, 0.0, 0.5)   # Purple
+]
+
 
 ##define function to draw the cube
 def Cube(pos, id, depth):
     # print(pos)
     glBegin(GL_LINES)
-    glColor3fv((1, (4 - id) // 16, 1))
+    glColor3fv(color_list[id])
     for edge in edges:
         for index in edge:
             glVertex3f(
                 *tuple(
-                    a * 0.5 / np.power(_CHUNK_SIZE, depth) + b
+                    a / np.float_power(_CHUNK_SIZE, depth - _NUM_MACRO_CHUNKS) + b
                     for a, b in zip(vertices[index], pos)
                 )
             )
     glEnd()
 
 
-chunkGod = Chunk((0, 0, 0), None, 0)
-chunkA = Chunk((1, 0, 0), chunkGod, 1)
+chunkGod = Chunk((0, 0, 0), None, 1)
+chunkA = Chunk((0, 0, 0), chunkGod, 2)
 chunkGod.add_child(chunkA)
-chunkB = Chunk((0, 0, 0), chunkA, 2)
+chunkA = Chunk((0, 1, 0), chunkGod, 2)
+chunkGod.add_child(chunkA)
+
+chunkB = Chunk((0, 0, 0), chunkA, 3)
 chunkA.add_child(chunkB)
-chunkC = Chunk((1, 0, 0), chunkB, 3)
+chunkB = Chunk((0, 1, 0), chunkA, 3)
+chunkA.add_child(chunkB)
+chunkC = Chunk((0, 0, 0), chunkB, 4)
 chunkB.add_child(chunkC)
+chunkD = Chunk((0, 0, 0), chunkB, 5)
+chunkC.add_child(chunkD)
 
 
 ##Define main function to draw a window for the openGL
 def main():
     pygame.init()
-    display = (1200, 800)
+    display = (1200, 700)
     init_gl(display)
     camera = Camera()
     camera.update_camera()
