@@ -1,9 +1,12 @@
 # Minecraft clone
 # each block is a chunk and chunk is a block
-# so each block has like
+# like antman and minecraft had a baby
+# all around switching scales
+
+# certain mob encounters can deny switching scales
 
 ## Infinitium Bird Feather Staff
-# Allows users to
+# Allows users to glide down from the top of the chunk when switching scales
 
 
 
@@ -15,7 +18,7 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-_CHUNK_SIZE = 9
+_CHUNK_SIZE = 4
 
 class Block:
     def __init__(self, chunk_pos, id):
@@ -39,7 +42,7 @@ class Chunk:
 
     def draw(self):
         for idx, i in enumerate(self.items):
-            Cube((self.pos[0] * _CHUNK_SIZE + (idx % _CHUNK_SIZE ** 2) // _CHUNK_SIZE, self.pos[1] * _CHUNK_SIZE + (idx // _CHUNK_SIZE), self.pos[2] * _CHUNK_SIZE + idx % _CHUNK_SIZE ^ 2), i)
+            Cube((self.pos[0] * _CHUNK_SIZE + (idx % _CHUNK_SIZE ** 2) // _CHUNK_SIZE, self.pos[1] * _CHUNK_SIZE + (idx // _CHUNK_SIZE // _CHUNK_SIZE), self.pos[2] * _CHUNK_SIZE + idx % _CHUNK_SIZE ^ 2), i)
 
 def init_gl(display):
     pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
@@ -158,7 +161,20 @@ def Cube(pos, id):
 
 
 cd = ChunkData()
-a0 = Chunk((0,0,0), cd.get_items())
+chunk_set = list()
+chunk_set.append(Chunk((0,0,0), cd.items))
+chunk_set.append(Chunk((1,0,0), cd.items))
+chunk_set.append(Chunk((0,1,0), cd.items))
+chunk_set.append(Chunk((1,1,1), cd.items))
+chunk_set.append(Chunk((3,3,3), cd.items))
+chunk_set.append(Chunk((2,3,3), cd.items))
+chunk_set.append(Chunk((3,2,3), cd.items))
+chunk_set.append(Chunk((2,2,2), cd.items))
+chunk_set.append(Chunk((3,3,0), cd.items))
+chunk_set.append(Chunk((0,3,3), cd.items))
+#chunk_set.append(Chunk((3,3,3), cd.items))
+#chunk_set.append(Chunk((3,0,3), cd.items))
+
 
 
 ##Define main function to draw a window for the openGL
@@ -205,7 +221,8 @@ def main():
         
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        a0.draw()
+        for c in chunk_set:
+            c.draw()
         # Cube((0,0,0),1)
         # Cube((1,1,0),1)
         
