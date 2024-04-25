@@ -67,21 +67,58 @@
 # power, damage, what have you. To larger players, it will seem like their tools swing slow, and to
 # smaller players, their tools will swing fast.
 
-## Scales
-# Colossal (eats whales like they're chicken legs)
-# Giant (about whale sized)
-# Normal
-# Small (could ride a bird or a large dragonfly)
-# Tiny (ants are dog-sized)
+## Scales (1 block = ? tall&wide)
+## https://learn.genetics.utah.edu/content/cells/scale/
+# 0:God        - 1536 ft (Empire State Building)
+# 1:Colossal   - 192 ft (64 yards on a football field)
+# 2:Giant      - 24 ft
+# 3:Normal     - 3 ft (Roughly 1 meter, inbetween a skateboard and guitar)
+# 4:Small      - 4.5 in (block is a little smaller than a Gamecube)
+# 5:Mini       - 0.5 in (12mm) (Average width of middle finger nail)
+# 6:Teeny      - 1.8 mm (Tip of crayon, or a small ant)
+# 7:Tiny       - 0.2 mm (Tardigrade)
+# 8:Micro      - 25 micrometers (skin cell)
+# 9:Supermicro - 3.1 micrometers (yeast cell. X Chromosome would be 2 blocks tall)
+
+# 10:Microbial
+# 10a:Nano      - 390 nm (2 bacteriophages stacked)
+# 10b:Supernano - 49 nm (hepatitis)
+# 10c:Meganano  - 6.1 nm (hemoglobin or tRNA) (Proteasome lives here, a barrel that destroys proteins)
+
+# 11:Pico      - 760 pm (amino acid, glucose) (molecular level) (dodging molecules and radiation is the game here)
+# 12:Atomic    - 95 pm (water molecule or carbon atom would take up a 3x3x3 space, which is perfect to represent in blocks)
+                 on the atomic level, every chunk is a molecule or molecules, which represent a material
+                 such as water, a solution of water and salt, an alloy, etc.
+# 13:Quantum   - Size does not exist at this scale. Nothing really does, its just a buffer layer, but you can
+                 set up quantum tunnels here to create traversible wormholes for anyone in the atomic realm and
+                 do some other weird stuff I guess.
 
 ### Mobs
 ### Each mob either has free will or an alterable behaviour circuit.
 ### Circuits can be altered to control their minds.
 ### Most mobs are specific to one or two layers, but a few mobs can traverse them like you can (i.e. Wizards)
-## Player (any layer) (home layer 3)
+### All mobs are defined by the layer above which they are composed and whose meshes their physics interact with.
+## Player (any layer) (home layer 3) (1x2x1)
 # Player controlled by a human. Can change their size and operate on different scales. 
-## Wizards (any layer) (commonly found on layer 3) (free will)
+## Wizards (any layer) (commonly found on layer 3) (free will) (1x2x1)
 # Dressed in off-white and gold, casting archaic, strange spells. Emphasis on "strange"...
 # They start out friendly and helpful, but become hostile once a user acquires <blank>... (maybe Uranium)
-## Dragonfly (layer 4)
-#
+## The Eternal (layer 0) (N/A) : After you kill Colossus and an angel, The Eternal takes you on himself.
+## Colossus (layer 1) (1x2x1) : When a giant views Collosus, they know what it's like to be a human.
+## Whale (layer 2) (3x1x1) : also giant squid, normal giants (titans), and other cool stuff
+## Player (layer 3) (1x2x1)
+## Small Bird (layer 4) (1x1x1) : little mice are like big dogs
+## Dragonfly (layer 5) (2x0.5x1) to (4x1x2) : also spiders can be big and scary here
+## Ant (layer 6) (2x1x1) to (4x2x2)
+## Tardigrade (layer 7) (1x1x1) : in its home level, the tardigrade has a camoflage ability. fairyflies found here too (egg-eating parasite)
+##                                a block here is the size of a eukaryotic cell 
+## White Blood Cell (layer 8) (1x1x1) : slow moving, heavy hitting mob. best dealt with from a distance
+## E. coli (layer 9) (1x0.25x0.25) : tries to grab and strangle the player
+## Viruses (layer 10a-10c) : all sorts of freaky mobs that do freaky things, also proteasome
+## Moving particles (layer 11) : here the only thing you have to worry about is getting collided with by other stuff.
+## Wizards (layer 12) : the wizards do not like you messing around on the atomic layer. Here they can be found weilding infinitium tools.
+## Angels (layer 12 or any) : Angels are believed to come from a higher dimension of spacetime. They have strange geometry and morph as they move,
+                       as if our 3d perception of them was merely a shadow cast onto us from a higher dimension. They are benevolent and remain 
+                       hidden until you discover infinitium (on layer 12), after which they become extremely hostile mini-bosses if you overuse 
+                       it (and can appear on any layer).
+## Quantum Worms (layer Q) :
