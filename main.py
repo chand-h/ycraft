@@ -6,16 +6,17 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 _CHUNK_SIZE = 8
-_NUM_MACRO_CHUNKS = 2
+_NUM_MACRO_CHUNKS = 3
 _TARGET_FPS = 30
 _CHUNK_SIZE_SQUARED = _CHUNK_SIZE * _CHUNK_SIZE
 _CHUNK_SIZE_CUBED = _CHUNK_SIZE_SQUARED * _CHUNK_SIZE
 _DEFAULT_SCALE_FACTOR = _CHUNK_SIZE**_NUM_MACRO_CHUNKS
 
-CAMERA_DEFAULT_SPEED = 0.2 * _DEFAULT_SCALE_FACTOR
+CAMERA_DEFAULT_SPEED = 0.05 * _DEFAULT_SCALE_FACTOR
 CAMERA_SWIFT_SPEED = 10 * CAMERA_DEFAULT_SPEED
 CAMERA_SLOW_SPEED = 0.05 * CAMERA_DEFAULT_SPEED
 CAMERA_MICRO_SPEED = 0.05 * CAMERA_SLOW_SPEED
+CAMERA_NANO_SPEED = 0.05 * CAMERA_MICRO_SPEED
 
 
 def _pos2idx(pos):
@@ -70,7 +71,7 @@ def init_gl(display):
     # Set up the projection matrix
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    gluPerspective(55, (display[0] / display[1]), 0.001, 300.0)
+    gluPerspective(55, (display[0] / display[1]), 0.00001, 3000.0)
 
     # Switch back to model view matrix
     glMatrixMode(GL_MODELVIEW)
@@ -112,6 +113,7 @@ class Camera:
 
 
 def handle_input(dt, camera):
+    keys = pygame.key.get_pressed()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -126,13 +128,11 @@ def handle_input(dt, camera):
                 camera.speed = CAMERA_DEFAULT_SPEED
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 2:
-                camera.speed = CAMERA_SWIFT_SPEED
+                camera.speed = CAMERA_NANO_SPEED
             if event.button == 3:
                 camera.speed = CAMERA_SLOW_SPEED
             if event.button == 1:
                 camera.speed = CAMERA_MICRO_SPEED
-
-    keys = pygame.key.get_pressed()
 
     camera.velocity = np.array([0, 0, 0], dtype=float)
     rad_yaw = np.radians(camera.yaw)
@@ -317,6 +317,12 @@ chunkE = Chunk((0, 0, 0), chunkD, 6)
 chunkD.add_child(chunkE)
 chunkF = Chunk((0, 0, 0), chunkE, 7)
 chunkE.add_child(chunkF)
+chunkG = Chunk((0, 0, 0), chunkF, 6)
+chunkF.add_child(chunkG)
+chunkH = Chunk((0, 0, 0), chunkG, 5)
+chunkG.add_child(chunkH)
+chunkI = Chunk((0, 0, 0), chunkH, 5)
+chunkH.add_child(chunkI)
 
 chunkZ = Chunk((6, 6, 6), chunkB, 1)
 chunkC.add_child(chunkZ)

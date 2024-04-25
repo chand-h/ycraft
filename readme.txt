@@ -70,7 +70,7 @@
 ## Scales (1 block = ? tall&wide)
 ## https://learn.genetics.utah.edu/content/cells/scale/
 # 0:God        - 1536 ft (Empire State Building)
-# 1:Colossal   - 192 ft (64 yards on a football field)
+# 1:Colossal   - 192 ft (field goal to 50 yd line)
 # 2:Giant      - 24 ft
 # 3:Normal     - 3 ft (Roughly 1 meter, inbetween a skateboard and guitar)
 # 4:Small      - 4.5 in (block is a little smaller than a Gamecube)
