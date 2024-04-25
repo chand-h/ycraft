@@ -1,74 +1,39 @@
-# Minecraft clone
-# each block is a chunk and chunk is a block
-# like antman and minecraft had a baby
-# all about switching scales
-
-# certain mob encounters can deny switching scales, mainly by wizards
-# who can also navigate through scale
-# but also by quantum creatures, who if any are observing you, your
-# equipment won't operate correctly
-
-# simpler mobs will be controlled by simple neural networks
-# these mobs will also be structures, or, like, dynamic rooms the player can
-# enter. Think of shrinking down and going inside of a pig. The world outside is no
-# longer rendered. You're practically in another dimension, which is just a small set of
-# rooms where you can mess with the pig's stomach and brain.
-# You mess with the brain by literally altering the neural net, which is represented by
-# blocks within the brain, on level Q-1
-# when you leave or when the animal dies, your position is updated by where you exit on the 
-# animal and where it was.
-
-# level Q is the quantum level
-# level 0 is the god level
-
-# Quantum level blocks have special flags denoting they don't contain chunk info
-# either that or they are simply integers within the arrays of Q-1
-
-## Infinitium Bird Feather Staff
-# Allows users to glide down from the top of the chunk when switching scales
-# position and velocity into realm upon change will be dependent of the position and velocity
-# of the staff in the larger dimension. So you can sling yourself into existence.
-
-
-## Infinitium Rings
-# Rare rings held by wizards. Can power tools or be melted down into Infinitium
-## Infinitium
-# Extremely rare, extremely heavy metal which can be used to alter the fabric of space.
-
-## Elytra
-# Item similar to elytra will allow for gliding. The catch however is that elytra will not work
-# in the macro layers. It will also not be very good in the classic layer. However speed and control
-# will greatly compound throughout the lower layers, allowing smaller players to fly around like bugs
-# around larger players. 
-
-## Attacking and tool usage
-# Attacking and tool usage in this game will be probably the only physics-based parts of this game.
-# Swings on tools, swords, and staffs will use data of the position and velocity of the tool to calculate
-# power, damage, what have you. To larger players, it will seem like their tools swing slow, and to
-# smaller players, their tools will swing fast.
-
-
 import pygame
+
 import numpy as np
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
 _CHUNK_SIZE = 8
+_NUM_MACRO_CHUNKS = 2
+_TARGET_FPS = 30
 _CHUNK_SIZE_SQUARED = _CHUNK_SIZE * _CHUNK_SIZE
 _CHUNK_SIZE_CUBED = _CHUNK_SIZE_SQUARED * _CHUNK_SIZE
-_NUM_MACRO_CHUNKS = 2
-_DEFAULT_SCALE_FACTOR = (_CHUNK_SIZE** _NUM_MACRO_CHUNKS)
+_DEFAULT_SCALE_FACTOR = _CHUNK_SIZE**_NUM_MACRO_CHUNKS
+
+CAMERA_DEFAULT_SPEED = 0.2 * _DEFAULT_SCALE_FACTOR
+CAMERA_SWIFT_SPEED = 10 * CAMERA_DEFAULT_SPEED
+CAMERA_SLOW_SPEED = 0.05 * CAMERA_DEFAULT_SPEED
+CAMERA_MICRO_SPEED = 0.05 * CAMERA_SLOW_SPEED
 
 
 def _pos2idx(pos):
     return pos[0] * _CHUNK_SIZE_SQUARED + pos[1] * _CHUNK_SIZE + pos[2]
 
 
+def _idx2pos(idx):
+    return (
+        (idx % _CHUNK_SIZE_SQUARED) // _CHUNK_SIZE,
+        idx % _CHUNK_SIZE,
+        idx // _CHUNK_SIZE_SQUARED,
+    )
+
+
 class Chunk:
     def __init__(self, pos, parent=None, id=0):
         self.pos = pos
-        self.items = np.empty(_CHUNK_SIZE_CUBED, dtype=object)
+        self.subchunks = np.empty(_CHUNK_SIZE_CUBED, dtype=object)
         self.parent = parent
         self.id = np.int8(id)
 
@@ -77,22 +42,22 @@ class Chunk:
 
     def _realpos(self, depth):
         if self.parent == None:
-            return self.pos
+            return [self.pos[n] * _CHUNK_SIZE_SQUARED for n in range(3)]
         else:
             parent_real = self.parent._realpos(depth - 1)
-            return (
-                parent_real[0] + self.pos[0] / np.float_power(_CHUNK_SIZE, depth - _NUM_MACRO_CHUNKS),
-                parent_real[1] + self.pos[1] / np.float_power(_CHUNK_SIZE, depth - _NUM_MACRO_CHUNKS),
-                parent_real[2] + self.pos[2] / np.float_power(_CHUNK_SIZE, depth - _NUM_MACRO_CHUNKS),
-            )
+            return [
+                parent_real[n]
+                + self.pos[n] / np.float_power(_CHUNK_SIZE, depth - _NUM_MACRO_CHUNKS)
+                for n in range(3)
+            ]
 
     def add_child(self, chunk):
-        self.items[_pos2idx(chunk.pos)] = chunk
+        self.subchunks[_pos2idx(chunk.pos)] = chunk
         chunk.parent = self
 
     def draw(self, depth=0):
         if self != None:
-            for i in self.items:
+            for i in self.subchunks:
                 if i != None:
                     i.draw(depth + 1)
             if self.id != 0:
@@ -110,15 +75,24 @@ def init_gl(display):
     # Switch back to model view matrix
     glMatrixMode(GL_MODELVIEW)
 
+
 #  (_CHUNK_SIZE** _NUM_MACRO_CHUNKS)
+
 
 class Camera:
     def __init__(self, position=[0.5 * 1, 1.5 * 1, -0.5 * 1], yaw=0, pitch=0):
         self.position = position
         self.yaw = yaw
         self.pitch = pitch
-        self.speed = 0.2 * _DEFAULT_SCALE_FACTOR
+        self.speed = CAMERA_DEFAULT_SPEED
         self.mouse_sensitivity = 0.1
+        self.velocity = np.zeros(3, dtype=float)
+
+    def move_camera(self):
+        norm = np.linalg.norm(self.velocity)
+        if norm == 0:
+            return
+        self.velocity = self.velocity / norm
 
     def update_camera(self):
         glLoadIdentity()
@@ -135,29 +109,55 @@ class Camera:
             1,
             0,
         )
-        # print(self.position[0:3])
 
-    def move_forward(self, dt):
-        self.position[0] += np.sin(np.radians(self.yaw)) * self.speed * dt
-        self.position[2] += np.cos(np.radians(self.yaw)) * self.speed * dt
 
-    def move_backward(self, dt):
-        self.position[0] -= np.sin(np.radians(self.yaw)) * self.speed * dt
-        self.position[2] -= np.cos(np.radians(self.yaw)) * self.speed * dt
+def handle_input(dt, camera):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            quit()
 
-    def move_right(self, dt):
-        self.position[0] -= np.cos(np.radians(self.yaw)) * self.speed * dt
-        self.position[2] += np.sin(np.radians(self.yaw)) * self.speed * dt
+        if event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 2:
+                camera.speed = CAMERA_DEFAULT_SPEED
+            if event.button == 3:
+                camera.speed = CAMERA_DEFAULT_SPEED
+            if event.button == 1:
+                camera.speed = CAMERA_DEFAULT_SPEED
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 2:
+                camera.speed = CAMERA_SWIFT_SPEED
+            if event.button == 3:
+                camera.speed = CAMERA_SLOW_SPEED
+            if event.button == 1:
+                camera.speed = CAMERA_MICRO_SPEED
 
-    def move_left(self, dt):
-        self.position[0] += np.cos(np.radians(self.yaw)) * self.speed * dt
-        self.position[2] -= np.sin(np.radians(self.yaw)) * self.speed * dt
+    keys = pygame.key.get_pressed()
 
-    def move_up(self, dt):
-        self.position[1] += self.speed * dt
+    camera.velocity = np.array([0, 0, 0], dtype=float)
+    rad_yaw = np.radians(camera.yaw)
+    forward = np.array([np.sin(rad_yaw), 0, np.cos(rad_yaw)])
+    right = np.array([np.cos(rad_yaw), 0, -np.sin(rad_yaw)])
 
-    def move_down(self, dt):
-        self.position[1] -= self.speed * dt
+    if keys[pygame.K_w]:
+        camera.velocity += forward
+    if keys[pygame.K_s]:
+        camera.velocity -= forward
+    if keys[pygame.K_a]:
+        camera.velocity += right
+    if keys[pygame.K_d]:
+        camera.velocity -= right
+    if keys[pygame.K_SPACE]:
+        camera.velocity[1] += 1
+    if keys[pygame.K_LSHIFT]:
+        camera.velocity[1] -= 1
+
+    norm = np.linalg.norm(camera.velocity)
+    if norm == 0:
+        return
+    else:
+        camera.velocity = camera.velocity / norm
+        camera.position += camera.velocity * camera.speed * dt
 
 
 ##Define the vertices. usually a cube contains 8 vertices
@@ -196,6 +196,7 @@ def create_cube_vbo():
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     return vbo_id
 
+
 color_list = [
     (1.0, 0.0, 0.0),  # Red
     (0.0, 1.0, 0.0),  # Green
@@ -204,7 +205,7 @@ color_list = [
     (1.0, 0.5, 0.0),  # Orange
     (0.0, 1.0, 1.0),  # Cyan
     (1.0, 0.0, 1.0),  # Magenta
-    (0.5, 0.0, 0.5)   # Purple
+    (0.5, 0.0, 0.5),  # Purple
 ]
 
 
@@ -224,53 +225,124 @@ def Cube(pos, id, depth):
     glEnd()
 
 
+def init_font(font_path, size):
+    try:
+        font = pygame.font.Font(font_path, size)
+        print("Font loaded successfully.")
+        return font
+    except IOError:
+        print("Font file not found.")
+        return pygame.font.Font(None, size)  # Fallback to the default font
+
+
+def create_text_texture(text, font, color=(255, 255, 255)):
+    text_surface = font.render(text, True, color)
+    text_data = pygame.image.tostring(text_surface, "RGBA", True)
+    texture_id = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture_id)
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGBA,
+        text_surface.get_width(),
+        text_surface.get_height(),
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        text_data,
+    )
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    return texture_id, text_surface.get_width(), text_surface.get_height()
+
+
+def draw_text(texture_id, width, height, window_width, window_height):
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    gluOrtho2D(0, window_width, 0, window_height)
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+
+    glBindTexture(GL_TEXTURE_2D, texture_id)
+    glEnable(GL_TEXTURE_2D)
+    glColor3f(1.0, 1.0, 1.0)  # Ensure the text color is white
+    glBegin(GL_QUADS)
+    x, y = (
+        window_width - width - 10,
+        window_height - height - 10,
+    )  # 10px offset from top right corner
+    glTexCoord2f(0, 1)
+    glVertex2f(x, y + height)
+    glTexCoord2f(1, 1)
+    glVertex2f(x + width, y + height)
+    glTexCoord2f(1, 0)
+    glVertex2f(x + width, y)
+    glTexCoord2f(0, 0)
+    glVertex2f(x, y)
+    glEnd()
+    glDisable(GL_TEXTURE_2D)
+
+    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
+
+
+# chunkGod = Chunk((0, 0, 0), None, 1)
+# for idx, subchunk1 in enumerate(chunkGod.subchunks):
+#     subchunk1 = Chunk(_idx2pos(idx), chunkGod, 2)
+#     # chunkGod.add_child(subchunk1)
+
+
 chunkGod = Chunk((0, 0, 0), None, 1)
-chunkA = Chunk((0, 0, 0), chunkGod, 2)
-chunkGod.add_child(chunkA)
 chunkA = Chunk((0, 1, 0), chunkGod, 2)
 chunkGod.add_child(chunkA)
+chunkA = Chunk((0, 0, 0), chunkGod, 2)
+chunkGod.add_child(chunkA)
 
-chunkB = Chunk((0, 0, 0), chunkA, 3)
-chunkA.add_child(chunkB)
 chunkB = Chunk((0, 1, 0), chunkA, 3)
+chunkA.add_child(chunkB)
+chunkB = Chunk((0, 0, 0), chunkA, 3)
 chunkA.add_child(chunkB)
 chunkC = Chunk((0, 0, 0), chunkB, 4)
 chunkB.add_child(chunkC)
-chunkD = Chunk((0, 0, 0), chunkB, 5)
+chunkC = Chunk((0, 1, 0), chunkB, 4)
+chunkB.add_child(chunkC)
+
+chunkD = Chunk((0, 0, 0), chunkC, 5)
 chunkC.add_child(chunkD)
+chunkE = Chunk((0, 0, 0), chunkD, 6)
+chunkD.add_child(chunkE)
+chunkF = Chunk((0, 0, 0), chunkE, 7)
+chunkE.add_child(chunkF)
+
+chunkZ = Chunk((6, 6, 6), chunkB, 1)
+chunkC.add_child(chunkZ)
+chunkZ = Chunk((7, 6, 6), chunkB, 1)
+chunkC.add_child(chunkZ)
 
 
 ##Define main function to draw a window for the openGL
 def main():
     pygame.init()
-    display = (1200, 700)
+    display = (1800, 1200)
     init_gl(display)
     camera = Camera()
     camera.update_camera()
     clock = pygame.time.Clock()
     pygame.event.set_grab(True)
-    pygame.mouse.set_visible(False)  # Hide the mouse cursor
+    pygame.mouse.set_visible(False)
+
+    font = init_font("Micro5Charted-Regular.ttf", 24)
+    text, width, height = create_text_texture("Hello, OpenGL!", font)
 
     while True:
-        dt = clock.tick(60) / 1000
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
-            keys = pygame.key.get_pressed()
+        dt = clock.tick(_TARGET_FPS) / 1000
+        fps = clock.get_fps()
 
-            if keys[pygame.K_w]:
-                camera.move_forward(dt)
-            if keys[pygame.K_s]:
-                camera.move_backward(dt)
-            if keys[pygame.K_a]:
-                camera.move_left(dt)
-            if keys[pygame.K_d]:
-                camera.move_right(dt)
-            if keys[pygame.K_SPACE]:
-                camera.move_up(dt)
-            if keys[pygame.K_LSHIFT]:
-                camera.move_down(dt)
+        handle_input(dt, camera)
 
         mouse_dx, mouse_dy = pygame.mouse.get_rel()
         camera.yaw -= mouse_dx * camera.mouse_sensitivity
@@ -284,11 +356,13 @@ def main():
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         chunkGod.draw()
-        # Cube((0,0,0),1)
-        # Cube((1,1,0),1)
+        draw_text(text, width, height, display[0], display[1])
+
+        fps_text = font.render(f"FPS: {int(fps)}", True, pygame.Color("white"))
+        pygame.display.get_surface().blit(fps_text, (10, 10))
 
         pygame.display.flip()
-        pygame.time.wait(10)
+        # pygame.time.wait(10)
 
 
 main()
